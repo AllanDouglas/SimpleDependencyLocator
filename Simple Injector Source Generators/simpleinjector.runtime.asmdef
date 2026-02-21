@@ -1,0 +1,16 @@
+{
+    "name": "simpleinjector.runtime",
+    "rootNamespace": "",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "DO_NOT_ENABLE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

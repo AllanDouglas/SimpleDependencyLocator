@@ -1,0 +1,305 @@
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+using System;
+using System.Text;
+using System.Linq;
+using System.Collections.Generic;
+using System.IO;
+
+namespace SimpleInject.SourceGenerators
+{
+
+    [Generator]
+    public sealed class InjectionFieldSrcGenerator : ISourceGenerator
+    {
+        public void Initialize(GeneratorInitializationContext context)
+        {
+            context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
+        }
+
+        public void Execute(GeneratorExecutionContext context)
+        {
+
+            var receiver = context.SyntaxReceiver as SyntaxReceiver;
+            if (receiver == null)
+                return;
+
+            var generatedStructs = new HashSet<string>();
+
+
+            foreach (var syntaxTree in context.Compilation.SyntaxTrees)
+            {
+                var semanticModel = context.Compilation.GetSemanticModel(syntaxTree);
+                var root = syntaxTree.GetRoot();
+
+                if (root is null)
+                {
+                    continue;
+                }
+
+                foreach (var classDecl in root.DescendantNodes())
+                {
+                    var model = context.Compilation.GetSemanticModel(classDecl.SyntaxTree);
+                    var classSymbol = model.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
+
+                    if (classSymbol == null)
+                        continue;
+
+                    var injectAttr = classSymbol.GetAttributes()
+                        .FirstOrDefault(a => a.AttributeClass != null &&
+                                             a.AttributeClass.Name == "InjectAttribute");
+
+                    if (injectAttr == null)
+                        continue;
+
+                    // ====== CREATE STRUCTS (Once Per type) ======
+                    var fieldNamespaceHash = new HashSet<string>();
+                    foreach (var arg in injectAttr.ConstructorArguments)
+                    {
+                        foreach (var element in arg.Values)
+                        {
+                            if (element.Value is INamedTypeSymbol typeSymbol)
+                            {
+                                var typeKey = typeSymbol.ToDisplayString();
+
+                                if (!generatedStructs.Contains(typeKey))
+                                {
+                                    generatedStructs.Add(typeKey);
+                                    GenerateStruct(context, typeSymbol, fieldNamespaceHash);
+                                }
+                            }
+                        }
+                    }
+
+                    // ====== CREATE PARTIAL CLASS ======
+                    GeneratePartial(context, classSymbol: classSymbol, injectAttr, fieldNamespaceHash);
+                }
+            }
+
+        }
+
+        // =========================================================
+        // STRUCT PROXY
+        // =========================================================
+        private void GenerateStruct(
+            GeneratorExecutionContext context,
+            INamedTypeSymbol interfaceSymbol,
+            HashSet<string> fieldNamespaceHash)
+        {
+
+            var fullInterfaceName = interfaceSymbol.ToDisplayString();
+            var interfaceName = interfaceSymbol.Name;
+
+            var cleanName = interfaceName.StartsWith("I") &&
+                            interfaceName.Length > 1
+                ? interfaceName.Substring(1)
+                : interfaceName;
+
+            var structName = cleanName + "InjectionField";
+            var namespaceName = interfaceSymbol.ContainingNamespace.ToDisplayString();
+
+            fieldNamespaceHash.Add(namespaceName);
+
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"using Injector;");
+            sb.AppendLine($"namespace {namespaceName}");
+            sb.AppendLine("{");
+            sb.AppendLine("    public readonly struct Singleton" + structName + " : " + fullInterfaceName);
+            sb.AppendLine("    {");
+            // sb.AppendLine("        public static " + structName + " Create()");
+            // sb.AppendLine($"            => new  {structName}(ServiceLocator.Resolve<{fullInterfaceName}>());");
+            sb.AppendLine();
+            sb.AppendLine("        private static " + fullInterfaceName + " _serviceCache ;");
+            sb.AppendLine($"        private {fullInterfaceName} _service =>  _serviceCache ??= ServiceLocator.Resolve<{fullInterfaceName}>();");
+            sb.AppendLine();
+            // sb.AppendLine("        public " + structName + "(" + fullInterfaceName + " service)");
+            // sb.AppendLine("        {");
+            // sb.AppendLine("            _service = service;");
+            // sb.AppendLine("        }");
+
+            // =====================
+            // MÉTODOS
+            // =====================
+            foreach (var method in interfaceSymbol.GetMembers().OfType<IMethodSymbol>())
+            {
+                if (method.MethodKind != MethodKind.Ordinary)
+                    continue;
+
+                var returnType = method.ReturnType.ToDisplayString();
+                var methodName = method.Name;
+
+                var genericParams = method.IsGenericMethod
+                    ? "<" + string.Join(", ", method.TypeParameters.Select(t => t.Name)) + ">"
+                    : "";
+
+                var parameters = string.Join(", ",
+                    method.Parameters.Select(p =>
+                    {
+                        string modifier = "";
+                        if (p.RefKind == RefKind.Ref) modifier = "ref ";
+                        else if (p.RefKind == RefKind.Out) modifier = "out ";
+                        else if (p.RefKind == RefKind.In) modifier = "in ";
+
+                        return modifier + p.Type.ToDisplayString() + " " + p.Name;
+                    }));
+
+                var arguments = string.Join(", ",
+                    method.Parameters.Select(p =>
+                    {
+                        string modifier = "";
+                        if (p.RefKind == RefKind.Ref) modifier = "ref ";
+                        else if (p.RefKind == RefKind.Out) modifier = "out ";
+                        else if (p.RefKind == RefKind.In) modifier = "in ";
+
+                        return modifier + p.Name;
+                    }));
+
+                sb.AppendLine();
+                sb.AppendLine("        public " + returnType + " " + methodName + genericParams + "(" + parameters + ")");
+                sb.AppendLine("            => _service." + methodName + genericParams + "(" + arguments + ");");
+            }
+
+            // =====================
+            // PROPRIEDADES
+            // =====================
+            foreach (var prop in interfaceSymbol.GetMembers().OfType<IPropertySymbol>())
+            {
+                sb.AppendLine();
+                sb.AppendLine("        public " + prop.Type.ToDisplayString() + " " + prop.Name);
+                sb.AppendLine("        {");
+
+                if (prop.GetMethod != null)
+                    sb.AppendLine("            get => _service." + prop.Name + ";");
+
+                if (prop.SetMethod != null)
+                    sb.AppendLine("            set => _service." + prop.Name + " = value;");
+
+                sb.AppendLine("        }");
+            }
+
+            // =====================
+            // EVENTOS
+            // =====================
+            foreach (var ev in interfaceSymbol.GetMembers().OfType<IEventSymbol>())
+            {
+                sb.AppendLine();
+                sb.AppendLine("        public event " + ev.Type.ToDisplayString() + " " + ev.Name);
+                sb.AppendLine("        {");
+                sb.AppendLine("            add => _service." + ev.Name + " += value;");
+                sb.AppendLine("            remove => _service." + ev.Name + " -= value;");
+                sb.AppendLine("        }");
+            }
+
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+
+            Log(sb.ToString());
+
+            context.AddSource(structName + ".g.cs",
+                SourceText.From(sb.ToString(), Encoding.UTF8));
+
+            Log($"Generated Struct {structName} - np: {namespaceName}");
+        }
+
+        // =========================================================
+        // PARTIAL CLASS
+        // =========================================================
+
+        private void GeneratePartial(
+            GeneratorExecutionContext context,
+            INamedTypeSymbol classSymbol,
+            AttributeData attribute,
+            HashSet<string> fieldNamespaceCollection)
+        {
+            var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
+            var className = classSymbol.Name;
+
+            var sb = new StringBuilder();
+
+            foreach (var fieldNamespace in fieldNamespaceCollection)
+            {
+                sb.AppendLine($"using {fieldNamespace};");
+            }
+
+            sb.AppendLine("namespace " + namespaceName);
+            sb.AppendLine("{");
+            sb.AppendLine("    public partial class " + className);
+            sb.AppendLine("    {");
+
+            foreach (var arg in attribute.ConstructorArguments)
+            {
+                foreach (var element in arg.Values)
+                {
+                    if (element.Value is not INamedTypeSymbol typeSymbol)
+                        continue;
+
+                    var interfaceName = typeSymbol.Name;
+
+                    var cleanName = interfaceName.StartsWith("I") &&
+                                    interfaceName.Length > 1
+                        ? interfaceName.Substring(1)
+                        : interfaceName;
+
+                    var structName = "Singleton" + cleanName + "InjectionField";
+                    var propertyName = cleanName;
+
+                    sb.AppendLine();
+                    // sb.AppendLine("        private " + structName + " " + propertyName + " { get; } = " + structName + ".Create();");
+                    sb.AppendLine("        private " + structName + " " + propertyName + " { get; }");
+                }
+            }
+
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+
+            context.AddSource(className + ".Inject.g.cs",
+                SourceText.From(sb.ToString(), Encoding.UTF8));
+        }
+
+        // =========================================================
+        // SYNTAX RECEIVER
+        // =========================================================
+
+        private class SyntaxReceiver : ISyntaxReceiver
+        {
+            public List<ClassDeclarationSyntax> CandidateClasses { get; }
+                = new List<ClassDeclarationSyntax>();
+
+            public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
+            {
+                var classDecl = syntaxNode as ClassDeclarationSyntax;
+                if (classDecl == null)
+                    return;
+
+                if (classDecl.AttributeLists.Count > 0)
+                    CandidateClasses.Add(classDecl);
+
+
+            }
+        }
+
+        private static readonly string LogPath =
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                    "inject_generator.log");
+
+        public static void Log(string message)
+        {
+            try
+            {
+                if (!File.Exists(LogPath))
+                    File.Create(LogPath);
+
+                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
+                File.AppendAllText(LogPath, line, Encoding.UTF8);
+            }
+            catch
+            {
+                // Evita quebrar a compilação caso falhe
+            }
+        }
+
+    }
+}
