@@ -1,0 +1,18 @@
+{
+    "name": "SimpleDependencyLocator.Editor",
+    "rootNamespace": "SimpleDependencyLocator",
+    "references": [
+        "GUID:8427af839967043eebe8ed0b9ae3c0ca"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
