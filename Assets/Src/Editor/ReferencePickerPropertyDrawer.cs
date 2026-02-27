@@ -16,15 +16,13 @@ namespace Injector
         public SerializedProperty _currentProperty;
         private SerializedObject _serializedObject;
         private string _propertyPath;
-        private FieldInfo _fieldInfo;
 
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
             _currentProperty = property;
             _serializedObject = property.serializedObject;
             _propertyPath = property.propertyPath;
-            _fieldInfo = _serializedObject.targetObject.GetType().GetField(_propertyPath,
-                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
 
             var container = new VisualElement();
 
@@ -41,11 +39,16 @@ namespace Injector
                 return container;
             }
 
+            var allowStruct = fieldInfo.GetCustomAttribute<ReferencePickerAttribute>(true).AllowStruct;
+
             if (!_typeCache.TryGetValue(baseType, out var types))
             {
                 types = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => a.GetTypes())
-                    .Where(t => baseType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface && t.IsClass)
+                    .Where(t => baseType.IsAssignableFrom(t)
+                        && !t.IsAbstract
+                        && !t.IsInterface
+                        && (allowStruct || !t.IsValueType))
                     .OrderBy(t => t.Name)
                     .ToArray();
 
@@ -88,8 +91,11 @@ namespace Injector
                     box.style.paddingTop = 4;
                     box.style.paddingBottom = 4;
                     subContainer.Add(box);
-                    PropertyField t = new(property);
-                    box.Add(t);
+                    PropertyField propertyField = new(property)
+                    {
+                        label = property.managedReferenceValue.GetType().Name
+                    };
+                    box.Add(propertyField);
                 }
             }
 

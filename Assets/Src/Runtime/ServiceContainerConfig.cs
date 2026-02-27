@@ -15,7 +15,7 @@ namespace Injector
         public struct ServiceEntry : ISerializationCallbackReceiver
         {
             [SerializeField, ReadyOnly] public string[] types;
-            [SerializeReference, ReferencePicker] public IService service;
+            [SerializeReference, ReferencePicker(allowStruct: false)] public IService service;
 
             public void OnAfterDeserialize() { }
 
