@@ -104,6 +104,11 @@ namespace Injector
 
             popup.RegisterValueChangedCallback(evt =>
             {
+                if (evt.newValue == evt.previousValue)
+                {
+                    return;
+                }
+                
                 int selectedIndex = typeChoices.IndexOf(evt.newValue);
 
                 var property = _serializedObject.FindProperty(_propertyPath);
@@ -120,6 +125,7 @@ namespace Injector
 
                 _serializedObject.ApplyModifiedProperties();
                 RefreshSubProperty();
+                container.SendEvent(ChangeEvent<string>.GetPooled(evt.previousValue, evt.newValue));
             });
             if (property.managedReferenceValue != null)
             {

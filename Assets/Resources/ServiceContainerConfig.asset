@@ -16,18 +16,13 @@ MonoBehaviour:
   - types:
     - Injector.IEchoService
     service:
-      rid: 3723316324044374113
+      rid: 3723316439418929763
   - types:
     - Injector.IEchoService
     service:
-      rid: 3723316324044374084
-  - types: []
-    service:
       rid: -2
-  - types: []
-    service:
-      rid: -2
-  - types: []
+  - types:
+    - Injector.IEchoService
     service:
       rid: -2
   references:
@@ -35,9 +30,6 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 3723316324044374084
-      type: {class: SingletonEchoServiceInjectionField, ns: Injector, asm: SimpleDependencyLocator.Runtime}
-      data: 
-    - rid: 3723316324044374113
+    - rid: 3723316439418929763
       type: {class: EchoService, ns: Injector, asm: SimpleDependencyLocator.Runtime}
       data: 

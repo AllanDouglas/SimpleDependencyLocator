@@ -5,6 +5,8 @@ using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 using System.Collections.Generic;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 namespace Injector
 {
 
@@ -125,10 +127,10 @@ namespace Injector
         private SerializedObject serializedConfig;
         private System.Action onChanged;
         private int selectedTabIndex = 0;
-        private VisualElement tabsContainer;
+        private VisualElement leftPanel;               // holds tab buttons
+        private VisualElement splitter;
         private VisualElement contentContainer;
         private VisualElement rootElement;
-        private DropdownField tabDropdown;
 
         public ServiceContainerConfigInspector(ServiceContainerConfig config, System.Action onChanged)
         {
@@ -150,126 +152,124 @@ namespace Injector
 
         private VisualElement CreateUI()
         {
-            var container = new ScrollView();
-            container.style.flexGrow = 1;
+            // root row holding left panel, splitter and content
+            var rootRow = new VisualElement();
+            rootRow.style.flexGrow = 1;
+            rootRow.style.flexDirection = FlexDirection.Row;
 
-            // Tab bar
-            var tabBarContainer = new VisualElement();
-            tabBarContainer.style.flexDirection = FlexDirection.Row;
-            tabBarContainer.style.marginBottom = 10;
-            tabBarContainer.style.paddingLeft = 5;
-            tabBarContainer.style.paddingRight = 5;
-            tabBarContainer.style.paddingTop = 5;
-            tabBarContainer.style.borderBottomWidth = 1;
-            tabBarContainer.style.borderBottomColor = new Color(0.2f, 0.2f, 0.2f, 1);
-            tabBarContainer.style.alignItems = Align.Center;
+            // left panel with tabs (scrollable)
+            leftPanel = new ScrollView();
+            leftPanel.style.flexDirection = FlexDirection.Column;
+            leftPanel.style.width = new StyleLength(new Length(30, LengthUnit.Percent)); // default 30%
+            leftPanel.style.minWidth = 100;
+            leftPanel.style.borderRightWidth = 1;
+            leftPanel.style.borderRightColor = new Color(0.2f, 0.2f, 0.2f, 1);
+            leftPanel.style.paddingLeft = 5;
+            leftPanel.style.paddingRight = 5;
+            leftPanel.style.marginTop = 10;
+            leftPanel.style.flexGrow = 0;
 
-            tabsContainer = new VisualElement();
-            tabsContainer.style.flexDirection = FlexDirection.Row;
-            // tabBarContainer.Add(tabsContainer);
+            // draggable splitter
+            splitter = new VisualElement();
+            splitter.style.width = 4;
+            splitter.style.backgroundColor = new Color(0.3f, 0.3f, 0.3f, 1);
+            // cursor style unsupported in this Unity version, omit it
+            // splitter.style.cursor = new StyleCursor(MouseCursor.ResizeHorizontal);
 
-            // Add tab dropdown selector
-            tabDropdown = new DropdownField();
-            tabDropdown.style.width = 250;
-            tabDropdown.style.marginLeft = 10;
-            tabDropdown.label = "Select:";
-            tabDropdown.style.display = DisplayStyle.Flex; // Hidden by default, shown when tabs exist
-            tabDropdown.RegisterValueChangedCallback(evt =>
+            bool dragging = false;
+            float startMouseX = 0;
+            float startWidth = 0;
+
+            splitter.RegisterCallback<MouseDownEvent>(evt =>
             {
-                var index = int.Parse(evt.newValue.AsSpan()[0].ToString());
-                if (index >= 0 && index < config.ServicesEntry.Length)
+                dragging = true;
+                startMouseX = evt.mousePosition.x;
+                startWidth = leftPanel.resolvedStyle.width;
+                evt.StopPropagation();
+            });
+            splitter.RegisterCallback<MouseMoveEvent>(evt =>
+            {
+                if (dragging)
                 {
-                    selectedTabIndex = index;
-                    ShowTabContent(selectedTabIndex);
-                    // RefreshTabs();
+                    float delta = evt.mousePosition.x - startMouseX;
+                    float newWidth = startWidth + delta;
+                    float parentWidth = rootRow.resolvedStyle.width;
+                    if (parentWidth > 0)
+                    {
+                        float pct = Mathf.Clamp(newWidth / parentWidth, 0.1f, 0.9f);
+                        leftPanel.style.width = new StyleLength(new Length(pct * 100, LengthUnit.Percent));
+                    }
+                    else
+                    {
+                        leftPanel.style.width = newWidth;
+                    }
+                    evt.StopPropagation();
                 }
             });
-
-            tabBarContainer.Add(tabDropdown);
-
-            // Add tab button
-            var addTabButton = new Button(() => AddNewTab())
+            splitter.RegisterCallback<MouseUpEvent>(evt =>
             {
-                text = "+"
-            };
-            addTabButton.style.width = 30;
-            addTabButton.style.marginLeft = 10;
-            tabBarContainer.Add(addTabButton);
+                dragging = false;
+                evt.StopPropagation();
+            });
+            splitter.RegisterCallback<MouseLeaveEvent>(evt => { dragging = false; });
 
-            container.Add(tabBarContainer);
-
-            // Content container
-            contentContainer = new VisualElement();
+            // right/content panel (scrollable)
+            contentContainer = new ScrollView();
             contentContainer.style.flexGrow = 1;
             contentContainer.style.paddingLeft = 5;
             contentContainer.style.paddingRight = 5;
-            container.Add(contentContainer);
+
+            rootRow.Add(leftPanel);
+            rootRow.Add(splitter);
+            rootRow.Add(contentContainer);
 
             RefreshTabs();
 
-            return container;
+            return rootRow;
         }
 
         private void RefreshTabs()
         {
-            tabsContainer.Clear();
+            // rebuild vertical button list on left panel
+            leftPanel.Clear();
 
             if (config.ServicesEntry == null || config.ServicesEntry.Length == 0)
             {
                 selectedTabIndex = 0;
                 contentContainer.Clear();
                 contentContainer.Add(new Label("No service entries. Click '+' to add one."));
-                if (tabDropdown != null)
-                    tabDropdown.style.display = DisplayStyle.None;
+                DrawAddEntryBtn();
                 return;
             }
 
-            // Update dropdown options
-            if (tabDropdown != null)
-            {
-                var dropdownOptions = new List<string>();
-                for (int i = 0; i < config.ServicesEntry.Length; i++)
-                {
-                    var entry = config.ServicesEntry[i];
-                    var label = $"{i} - Entry {i + 1}";
-                    if (entry.service != null)
-                    {
-                        label = $"{i} - {entry.service.GetType().Name}";
-                    }
-                    dropdownOptions.Add(label);
-                }
-                tabDropdown.choices = dropdownOptions;
-                tabDropdown.formatListItemCallback = static index => index.AsSpan()[4..].ToString();
-                //tabDropdown.value = dropdownOptions[selectedTabIndex];
-                tabDropdown.formatSelectedValueCallback = null;
-                tabDropdown.formatSelectedValueCallback = value =>
-                {
-                    if (string.IsNullOrEmpty(value))
-                        return string.Empty;
-
-                    var index = int.Parse(value.AsSpan()[0].ToString());
-                    return dropdownOptions[index].AsSpan()[4..].ToString();
-                };
-                tabDropdown.SetValueWithoutNotify(dropdownOptions[selectedTabIndex]);
-                tabDropdown.style.display = DisplayStyle.Flex;
-            }
-
-            // Clamp selected tab index
+            // clamp selected index
             if (selectedTabIndex >= config.ServicesEntry.Length)
             {
                 selectedTabIndex = config.ServicesEntry.Length - 1;
             }
 
-            // Create tabs
-            // for (int i = Mathf.Max(0, selectedTabIndex - 1); i < Mathf.Min(selectedTabIndex + 3, config.ServicesEntry.Length); i++)
-            // {
-            //     int tabIndex = i;
-            //     var tabButton = CreateTabButton(tabIndex);
-            //     tabsContainer.Add(tabButton);
-            // }
+            // create buttons
+            for (int i = 0; i < config.ServicesEntry.Length; i++)
+            {
+                var btn = CreateTabButton(i);
+                btn.style.width = new StyleLength(new Length(95, LengthUnit.Percent));
+                btn.style.marginBottom = 2;
+                leftPanel.Add(btn);
+            }
 
-            // Show selected tab content
+            // add new-tab button at bottom
+            DrawAddEntryBtn();
+
+            // show the currently selected content
             ShowTabContent(selectedTabIndex);
+
+            void DrawAddEntryBtn()
+            {
+                var addTabBtn = new Button(() => AddNewTab()) { text = "+" };
+                addTabBtn.style.marginTop = 5;
+                addTabBtn.style.width = new StyleLength(new Length(95, LengthUnit.Percent));
+                leftPanel.Add(addTabBtn);
+            }
         }
 
         private Button CreateTabButton(int tabIndex)
@@ -283,10 +283,6 @@ namespace Injector
 
             var tabButton = new Button(() =>
             {
-
-                // tabsContainer.Query<Button>($"tabButton_{tabIndex}").First().style.backgroundColor = new Color(0.2f, 0.5f, 1, 1);
-                // tabsContainer.Query<Button>($"tabButton_{selectedTabIndex}").First().style.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1);
-
                 selectedTabIndex = tabIndex;
                 ShowTabContent(tabIndex);
                 RefreshTabs();
@@ -296,15 +292,13 @@ namespace Injector
                 text = tabLabel,
                 name = $"tabButton_{tabIndex}"
             };
-            tabButton.style.width = 100;
-            tabButton.style.maxWidth = 100;
-            tabButton.style.minWidth = 100;
+            // make the button expand horizontally in left panel;
             tabButton.style.alignContent = Align.FlexStart;
             tabButton.style.alignItems = Align.FlexStart;
             tabButton.style.unityTextAlign = TextAnchor.MiddleLeft;
-            tabButton.style.marginRight = 5;
             tabButton.style.paddingLeft = 10;
             tabButton.style.paddingRight = 10;
+
 
             // Highlight selected tab
             if (tabIndex == selectedTabIndex)
@@ -381,38 +375,18 @@ namespace Injector
                 var singleField = new PropertyField(singleEntryProperty);
                 inspectorContainer.Add(singleField);
                 singleField.Bind(serializedConfig);
-                singleField.RegisterValueChangeCallback(evt =>
+                singleField.RegisterCallback<ChangeEvent<string>>(evt =>
                 {
+                    if (evt.newValue == evt.previousValue)
+                    {
+                        return;
+                    }
+
                     serializedConfig.ApplyModifiedProperties();
                     onChanged?.Invoke();
                     RefreshTabs(); // Update tab labels to show the new service type
                 });
             }
-
-            // if (serviceProp != null)
-            // {
-            //     var serviceField = new PropertyField(serviceProp);
-            //     serviceField.style.marginBottom = 10;
-
-            //     // Bind changes to save the config
-            //     serviceField.RegisterValueChangeCallback(evt =>
-            //     {
-            //         serializedConfig.ApplyModifiedProperties();
-            //         onChanged?.Invoke();
-            //         RefreshTabs(); // Update tab labels to show the new service type
-            //     });
-
-            //     inspectorContainer.Add(serviceField);
-            // }
-
-            // // Show types field as read-only
-            // var typesProp = singleEntryProperty.FindPropertyRelative("types");
-            // if (typesProp != null)
-            // {
-            //     var typesField = new PropertyField(typesProp, "Implemented Interfaces");
-            //     typesField.SetEnabled(false);
-            //     inspectorContainer.Add(typesField);
-            // }
 
             contentContainer.Add(inspectorContainer);
         }
@@ -425,13 +399,15 @@ namespace Injector
             };
 
             config.ServicesEntry = entries.ToArray();
-
-            selectedTabIndex = entries.Count - 1;
-
             serializedConfig.ApplyModifiedProperties();
-            onChanged?.Invoke();
 
-            RefreshTabs();
+            Task.Delay(100).ContinueWith(_ =>
+            {
+                selectedTabIndex = entries.Count - 1;
+                onChanged?.Invoke();
+                RefreshTabs();
+            }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.FromCurrentSynchronizationContext());
+
         }
 
         private void RemoveTab(int tabIndex)
