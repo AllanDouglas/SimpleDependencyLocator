@@ -45,7 +45,7 @@ namespace Injector
             {
                 types = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => a.GetTypes())
-                    .Where(t => baseType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+                    .Where(t => baseType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface && t.IsClass)
                     .OrderBy(t => t.Name)
                     .ToArray();
 
