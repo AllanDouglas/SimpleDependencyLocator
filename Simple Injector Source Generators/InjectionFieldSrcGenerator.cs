@@ -195,12 +195,9 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
-            Log(sb.ToString());
-
             context.AddSource(structName + ".g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
 
-            Log($"Generated Struct {structName} - np: {namespaceName}");
         }
 
         // =========================================================
