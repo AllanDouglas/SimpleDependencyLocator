@@ -20,63 +20,44 @@ namespace SimpleInject.SourceGenerators
 
         public void Execute(GeneratorExecutionContext context)
         {
-
-            var receiver = context.SyntaxReceiver as SyntaxReceiver;
-            if (receiver == null)
+            if (context.SyntaxReceiver is not SyntaxReceiver receiver)
                 return;
 
             var generatedStructs = new HashSet<string>();
 
-
-            foreach (var syntaxTree in context.Compilation.SyntaxTrees)
+            foreach (var classDecl in receiver.CandidateClasses)
             {
-                var semanticModel = context.Compilation.GetSemanticModel(syntaxTree);
-                var root = syntaxTree.GetRoot();
+                var semanticModel = context.Compilation.GetSemanticModel(classDecl.SyntaxTree);
+                var classSymbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
 
-                if (root is null)
-                {
+                if (classSymbol == null)
                     continue;
-                }
 
-                foreach (var classDecl in root.DescendantNodes())
+                var injectAttr = classSymbol.GetAttributes()
+                    .FirstOrDefault(a =>
+                        a.AttributeClass?.ToDisplayString() == "Injector.InjectAttribute");
+
+                if (injectAttr == null)
+                    continue;
+
+                var fieldNamespaces = new HashSet<string>();
+
+                foreach (var arg in injectAttr.ConstructorArguments)
                 {
-                    var model = context.Compilation.GetSemanticModel(classDecl.SyntaxTree);
-                    var classSymbol = model.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
-
-                    if (classSymbol == null)
-                        continue;
-
-                    var injectAttr = classSymbol.GetAttributes()
-                        .FirstOrDefault(a => a.AttributeClass != null &&
-                                             a.AttributeClass.Name == "InjectAttribute");
-
-                    if (injectAttr == null)
-                        continue;
-
-                    // ====== CREATE STRUCTS (Once Per type) ======
-                    var fieldNamespaceHash = new HashSet<string>();
-                    foreach (var arg in injectAttr.ConstructorArguments)
+                    foreach (var element in arg.Values)
                     {
-                        foreach (var element in arg.Values)
-                        {
-                            if (element.Value is INamedTypeSymbol typeSymbol)
-                            {
-                                var typeKey = typeSymbol.ToDisplayString();
+                        if (element.Value is not INamedTypeSymbol typeSymbol)
+                            continue;
 
-                                if (!generatedStructs.Contains(typeKey))
-                                {
-                                    generatedStructs.Add(typeKey);
-                                    GenerateStruct(context, typeSymbol, fieldNamespaceHash);
-                                }
-                            }
-                        }
+                        var key = typeSymbol.ToDisplayString();
+
+                        if (generatedStructs.Add(key))
+                            GenerateStruct(context, typeSymbol, fieldNamespaces);
                     }
-
-                    // ====== CREATE PARTIAL CLASS ======
-                    GeneratePartial(context, classSymbol: classSymbol, injectAttr, fieldNamespaceHash);
                 }
-            }
 
+                GeneratePartial(context, classSymbol, injectAttr, fieldNamespaces);
+            }
         }
 
         // =========================================================
@@ -250,7 +231,7 @@ namespace SimpleInject.SourceGenerators
 
             sb.AppendLine("    }");
             sb.AppendLine("}");
-            
+
             context.AddSource(className + ".Inject.g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
         }
