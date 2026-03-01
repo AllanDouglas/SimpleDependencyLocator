@@ -23,7 +23,7 @@ namespace SimpleInject.SourceGenerators
             if (context.SyntaxReceiver is not SyntaxReceiver receiver)
                 return;
 
-            Log($"#### STARTING assembly:{context.Compilation.AssemblyName} candidate {receiver.CandidateClasses} ####");
+            // Log($"#### STARTING assembly:{context.Compilation.AssemblyName} candidate {receiver.CandidateClasses} ####");
 
             var generatedStructs = new HashSet<string>();
             var generatedClasses = new HashSet<string>();
@@ -189,7 +189,7 @@ namespace SimpleInject.SourceGenerators
 
             sb.AppendLine("    }");
             sb.AppendLine("}");
-            Log(sb.ToString());
+            // Log(sb.ToString());
             context.AddSource(structName + $"_{context.Compilation.AssemblyName}" + ".g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
 
@@ -250,7 +250,7 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
-            Log(sb.ToString());
+            // Log(sb.ToString());
 
             context.AddSource($"{className}_{context.Compilation.AssemblyName}.Inject.g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
