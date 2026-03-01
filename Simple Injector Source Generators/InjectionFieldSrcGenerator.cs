@@ -240,6 +240,8 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
+            Log(sb.ToString());
+
             context.AddSource(className + ".Inject.g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
         }
@@ -268,7 +270,7 @@ namespace SimpleInject.SourceGenerators
 
         private static readonly string LogPath =
                 Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                    Environment.CurrentDirectory,
                     "inject_generator.log");
 
         public static void Log(string message)
