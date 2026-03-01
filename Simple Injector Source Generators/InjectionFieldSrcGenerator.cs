@@ -179,8 +179,8 @@ namespace SimpleInject.SourceGenerators
 
             sb.AppendLine("    }");
             sb.AppendLine("}");
-
-            context.AddSource(structName + ".g.cs",
+            Log(sb.ToString());
+            context.AddSource(structName + $"_{context.Compilation.AssemblyName}" + ".g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
 
         }
@@ -242,7 +242,7 @@ namespace SimpleInject.SourceGenerators
 
             Log(sb.ToString());
 
-            context.AddSource(className + ".Inject.g.cs",
+            context.AddSource($"{className}_{context.Compilation.AssemblyName}.Inject.g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
