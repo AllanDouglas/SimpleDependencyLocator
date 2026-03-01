@@ -115,7 +115,6 @@ namespace Injector
                     AssetDatabase.SaveAssets();
                     AssetDatabase.Refresh();
 
-                    Debug.Log("ServiceContainerConfig criado em: " + AssetFullPath);
                 }
             }
         }
@@ -228,7 +227,7 @@ namespace Injector
             return rootRow;
         }
 
-        private void RefreshTabs()
+        private void RefreshTabs(bool redrawContent = true)
         {
             // rebuild vertical button list on left panel
             leftPanel.Clear();
@@ -261,7 +260,10 @@ namespace Injector
             DrawAddEntryBtn();
 
             // show the currently selected content
-            ShowTabContent(selectedTabIndex);
+            if (redrawContent)
+            {
+                ShowTabContent(selectedTabIndex);
+            }
 
             void DrawAddEntryBtn()
             {
@@ -375,17 +377,19 @@ namespace Injector
                 var singleField = new PropertyField(singleEntryProperty);
                 inspectorContainer.Add(singleField);
                 singleField.Bind(serializedConfig);
-                singleField.RegisterCallback<ChangeEvent<string>>(evt =>
+                singleField.RegisterCallback<ChangeEvent<string>>(ChangeEventHandler);
+                void ChangeEventHandler(ChangeEvent<string> evt)
                 {
                     if (evt.newValue == evt.previousValue)
                     {
                         return;
                     }
-
+                    singleField.UnregisterCallback<ChangeEvent<string>>(ChangeEventHandler);
                     serializedConfig.ApplyModifiedProperties();
                     onChanged?.Invoke();
-                    RefreshTabs(); // Update tab labels to show the new service type
-                });
+                    RefreshTabs(false); // Update tab labels to show the new service type
+                }
+
             }
 
             contentContainer.Add(inspectorContainer);
