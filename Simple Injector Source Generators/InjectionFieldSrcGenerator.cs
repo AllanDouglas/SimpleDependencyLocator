@@ -24,14 +24,19 @@ namespace SimpleInject.SourceGenerators
                 return;
 
             var generatedStructs = new HashSet<string>();
+            var generatedClasses = new HashSet<string>();
 
             foreach (var classDecl in receiver.CandidateClasses)
             {
                 var semanticModel = context.Compilation.GetSemanticModel(classDecl.SyntaxTree);
-                var classSymbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
 
-                if (classSymbol == null)
+                if (semanticModel.GetDeclaredSymbol(classDecl) is not INamedTypeSymbol classSymbol)
                     continue;
+
+                if (generatedClasses.Contains(classSymbol.Name))
+                    continue;
+
+                generatedClasses.Add(classSymbol.Name);
 
                 var injectAttr = classSymbol.GetAttributes()
                     .FirstOrDefault(a =>
@@ -50,6 +55,9 @@ namespace SimpleInject.SourceGenerators
                             continue;
 
                         var key = typeSymbol.ToDisplayString();
+
+                        if (generatedStructs.Contains(key))
+                            continue;
 
                         if (generatedStructs.Add(key))
                             GenerateStruct(context, typeSymbol, fieldNamespaces);
