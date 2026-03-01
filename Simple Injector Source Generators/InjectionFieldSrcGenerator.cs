@@ -250,7 +250,7 @@ namespace SimpleInject.SourceGenerators
 
             sb.AppendLine("    }");
             sb.AppendLine("}");
-
+            
             context.AddSource(className + ".Inject.g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
         }
