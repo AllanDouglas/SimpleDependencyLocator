@@ -22,7 +22,8 @@ namespace SimpleInject.SourceGenerators
         {
             if (context.SyntaxReceiver is not SyntaxReceiver receiver)
                 return;
-            Log("#### STARTING ####");
+
+            Log($"#### STARTING assembly:{context.Compilation.AssemblyName} candidate {receiver.CandidateClasses} ####");
 
             var generatedStructs = new HashSet<string>();
             var generatedClasses = new HashSet<string>();
