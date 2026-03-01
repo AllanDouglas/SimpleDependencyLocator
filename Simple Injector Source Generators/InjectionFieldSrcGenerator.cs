@@ -22,6 +22,7 @@ namespace SimpleInject.SourceGenerators
         {
             if (context.SyntaxReceiver is not SyntaxReceiver receiver)
                 return;
+            Log("#### STARTING ####");
 
             var generatedStructs = new HashSet<string>();
             var generatedClasses = new HashSet<string>();
@@ -281,14 +282,14 @@ namespace SimpleInject.SourceGenerators
                     Environment.CurrentDirectory,
                     "inject_generator.log");
 
-        public static void Log(string message)
+        public void Log(string message)
         {
             try
             {
                 if (!File.Exists(LogPath))
                     File.Create(LogPath);
 
-                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
+                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] - {i++} - {message}{Environment.NewLine}";
                 File.AppendAllText(LogPath, line, Encoding.UTF8);
             }
             catch
@@ -297,5 +298,6 @@ namespace SimpleInject.SourceGenerators
             }
         }
 
+        int i;
     }
 }
