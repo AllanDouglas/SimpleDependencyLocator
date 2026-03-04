@@ -26,9 +26,15 @@ namespace Injector
             }
 
             var config = Resources.Load<ServiceContainerConfig>("ServiceContainerConfig");
+
+            var allServiceTypes = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.FullName.StartsWith("Unity") && !a.FullName.StartsWith("UnityEditor"))
+                .SelectMany(s => s.GetTypes())
+                .Where(p => typeof(IService).IsAssignableFrom(p));
+
             foreach (var (entry, type) in from ServiceContainerConfig.ServiceEntry entry in config.ServicesEntry
                                           from typeName in entry.types
-                                          from type in TypeCache.GetTypesDerivedFrom<IService>()
+                                          from type in allServiceTypes
                                           where typeName == type.FullName
                                           select (entry, type))
             {
