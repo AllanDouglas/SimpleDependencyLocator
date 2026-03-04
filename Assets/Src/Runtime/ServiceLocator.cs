@@ -33,7 +33,6 @@ namespace Injector
                                           select (entry, type))
             {
                 _serviceMapping.Add(type, entry.service);
-                break;
             }
 
             _loaded = true;
