@@ -374,7 +374,7 @@ namespace Injector
             // var serviceProp = singleEntryProperty.FindPropertyRelative("service");
             if (singleEntryProperty != null)
             {
-                var singleField = new PropertyField(singleEntryProperty);
+                var singleField = new PropertyField(singleEntryProperty, tabLabelText);
                 inspectorContainer.Add(singleField);
                 singleField.Bind(serializedConfig);
                 singleField.RegisterCallback<ChangeEvent<string>>(ChangeEventHandler);
