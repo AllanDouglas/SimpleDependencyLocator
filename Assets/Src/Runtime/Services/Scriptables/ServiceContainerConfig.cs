@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 
@@ -7,9 +9,29 @@ namespace Injector
     [CreateAssetMenu(menuName = "Simple Dependency Locator/Config/Service Container Config")]
     public sealed class ServiceContainerConfig : ScriptableObject
     {
-        [SerializeField] private ServiceEntry[] _servicesEntry;
+        private static ServiceContainerConfig _instance;
+        public static ServiceContainerConfig Instance => _instance = _instance != null ? _instance : Resources.Load<ServiceContainerConfig>("ServiceContainerConfig");
 
-        public ServiceEntry[] ServicesEntry { get => _servicesEntry; set => _servicesEntry = value; }
+        [SerializeField] private List<ServiceEntry> _servicesEntry;
+
+        public List<ServiceEntry> ServicesEntry { get => _servicesEntry; set => _servicesEntry = value; }
+
+        public void Bind<T>(T service)
+            where T : IService
+        {
+#if UNITY_EDITOR
+            var serviceType = typeof(T);
+            if (ServicesEntry.Any(entry => entry.types.Contains(serviceType.FullName)))
+            {
+                throw new InvalidOperationException($"Service for {serviceType} is already registered in the config!");
+            }
+#endif
+
+            ServicesEntry.Add(new()
+            {
+                service = service
+            });
+        }
 
         [Serializable]
         public struct ServiceEntry : ISerializationCallbackReceiver
@@ -26,7 +48,7 @@ namespace Injector
                     return;
 
                 var interfaces = serviceType.GetInterfaces();
-                var implementedTypes = new System.Collections.Generic.List<string>();
+                var implementedTypes = new List<string>();
 
                 foreach (var interfaceType in interfaces)
                 {
@@ -35,6 +57,8 @@ namespace Injector
                         implementedTypes.Add(interfaceType.FullName);
                     }
                 }
+
+                implementedTypes.Add(service.GetType().FullName);
 
                 types = implementedTypes.ToArray();
             }

@@ -14,6 +14,8 @@ namespace Injector
         private static ServiceLocator _instance;
         public static ServiceLocator Instance => _instance ??= new ServiceLocator();
 
+        public ServiceContainerConfig ServiceInstaller => ServiceContainerConfig.Instance;
+
         private ServiceLocator()
         {
             Load();
@@ -27,7 +29,13 @@ namespace Injector
                 return;
             }
 
-            var config = Resources.Load<ServiceContainerConfig>("ServiceContainerConfig");
+            var config = ServiceContainerConfig.Instance;
+
+            if (config == null)
+            {
+                Debug.LogError("ServiceContainerConfig not found! Please create a ServiceContainerConfig asset and configure your services.");
+                return;
+            }
 
             var allServiceTypes = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(a => !a.FullName.StartsWith("Unity") && !a.FullName.StartsWith("UnityEditor"))
