@@ -5,13 +5,19 @@ using UnityEngine.UIElements;
 
 namespace Injector
 {
-    public static class EventLocator
+    public class EventLocator
     {
-        private static readonly Dictionary<Type, IEvent> _events = new();
-        private static readonly Dictionary<Type, object> _eventsWithData = new();
+        private static readonly Lazy<EventLocator> _instance = new(() => new EventLocator());
+        public static EventLocator Instance => _instance.Value;
 
+        private readonly Dictionary<Type, IEvent> _events = new();
+        private readonly Dictionary<Type, object> _eventsWithData = new();
 
-        public static void Subscribe<TEvent>(EventHandler eventHandler)
+        private EventLocator()
+        {
+        }
+
+        public void Subscribe<TEvent>(EventHandler eventHandler)
             where TEvent : IEvent, new()
         {
             if (_events.ContainsKey(typeof(TEvent)))
@@ -25,7 +31,7 @@ namespace Injector
             _events.Add(typeof(TEvent), newEvent);
         }
 
-        public static void Unsubscribe<TEvent>(EventHandler eventHandler)
+        public void Unsubscribe<TEvent>(EventHandler eventHandler)
             where TEvent : IEvent, new()
         {
             if (_events.ContainsKey(typeof(TEvent)))
@@ -35,7 +41,7 @@ namespace Injector
             }
         }
 
-        public static void Subscribe<TEvent, TData>(EventHandler<TData> eventHandler)
+        public void Subscribe<TEvent, TData>(EventHandler<TData> eventHandler)
             where TEvent : IEvent<TData>, new()
         {
             if (_eventsWithData.ContainsKey(typeof(TEvent)))
@@ -49,7 +55,7 @@ namespace Injector
             _eventsWithData.Add(typeof(TEvent), newEvent);
         }
 
-        public static void Unsubscribe<TEvent, TData>(EventHandler<TData> eventHandler)
+        public void Unsubscribe<TEvent, TData>(EventHandler<TData> eventHandler)
             where TEvent : IEvent<TData>, new()
         {
             if (_eventsWithData.ContainsKey(typeof(TEvent)))
@@ -59,7 +65,7 @@ namespace Injector
             }
         }
 
-        public static void Dispatch<TEvent>()
+        public void Dispatch<TEvent>()
             where TEvent : IEvent, new()
         {
             if (_events.ContainsKey(typeof(TEvent)))
@@ -73,7 +79,7 @@ namespace Injector
             _events.Add(typeof(TEvent), newEvent);
         }
 
-        public static void Dispatch<TEvent, TData>(TData data)
+        public void Dispatch<TEvent, TData>(TData data)
             where TEvent : IEvent<TData>, new()
         {
             if (_eventsWithData.ContainsKey(typeof(TEvent)))
@@ -87,7 +93,7 @@ namespace Injector
             _eventsWithData.Add(typeof(TEvent), newEvent);
         }
 
-        public static void Subscribe(Type eventType, EventHandler handler)
+        public void Subscribe(Type eventType, EventHandler handler)
         {
             if (!typeof(IEvent).IsAssignableFrom(eventType))
                 throw new ArgumentException("type must implement IEvent", nameof(eventType));
@@ -103,7 +109,7 @@ namespace Injector
             _events.Add(eventType, newEvent);
         }
 
-        public static void Subscribe(Type eventType, EventHandler<object> handler)
+        public void Subscribe(Type eventType, EventHandler<object> handler)
         {
             if (_eventsWithData.TryGetValue(eventType, out var existing))
             {
@@ -116,7 +122,7 @@ namespace Injector
             _eventsWithData.Add(eventType, newEvent);
         }
 
-        public static void Unsubscribe(Type eventType, EventHandler<object> handler)
+        public void Unsubscribe(Type eventType, EventHandler<object> handler)
         {
             if (_eventsWithData.TryGetValue(eventType, out var existing))
             {
@@ -125,7 +131,7 @@ namespace Injector
             }
         }
 
-        public static void Unsubscribe(Type eventType, EventHandler handler)
+        public void Unsubscribe(Type eventType, EventHandler handler)
         {
             if (_events.TryGetValue(eventType, out var existing))
             {
@@ -133,7 +139,7 @@ namespace Injector
             }
         }
 
-        public static void Dispatch(Type eventType)
+        public void Dispatch(Type eventType)
         {
             if (_events.TryGetValue(eventType, out var existing))
             {
@@ -146,7 +152,7 @@ namespace Injector
             _events.Add(eventType, newEvent);
         }
 
-        public static void Dispatch(Type eventType, object data)
+        public void Dispatch(Type eventType, object data)
         {
             if (_eventsWithData.TryGetValue(eventType, out var existing))
             {

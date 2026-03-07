@@ -25,7 +25,7 @@ namespace Injector
 
                 if (Application.IsPlaying(property.serializedObject.targetObject))
                 {
-                    EventLocator.Dispatch(eventValue.GetType());
+                    EventLocator.Instance.Dispatch(eventValue.GetType());
                     return;
                 }
 
@@ -74,7 +74,7 @@ namespace Injector
 
                 if (Application.IsPlaying(property.serializedObject.targetObject))
                 {
-                    EventLocator.Dispatch(eventValue.GetType(), data);
+                    EventLocator.Instance.Dispatch(eventValue.GetType(), data);
                     return;
                 }
 

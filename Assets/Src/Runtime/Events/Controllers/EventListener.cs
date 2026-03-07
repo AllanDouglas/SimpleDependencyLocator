@@ -12,8 +12,8 @@ namespace Injector
         {
             if (Application.IsPlaying(this))
             {
-                EventLocator.Unsubscribe(_event.GetType(), _onPerformEvent.Invoke);
-                EventLocator.Subscribe(_event.GetType(), _onPerformEvent.Invoke);
+                EventLocator.Instance.Unsubscribe(_event.GetType(), _onPerformEvent.Invoke);
+                EventLocator.Instance.Subscribe(_event.GetType(), _onPerformEvent.Invoke);
             }
         }
     }
@@ -29,8 +29,8 @@ namespace Injector
             if (Application.IsPlaying(this))
             {
                 EventHandler<TData> handler = _onPerformEvent.Invoke;
-                EventLocator.Unsubscribe(_event.GetType(), Unsafe.As<EventHandler<object>>(handler));
-                EventLocator.Subscribe(_event.GetType(), Unsafe.As<EventHandler<object>>(handler));
+                EventLocator.Instance.Unsubscribe(_event.GetType(), Unsafe.As<EventHandler<object>>(handler));
+                EventLocator.Instance.Subscribe(_event.GetType(), Unsafe.As<EventHandler<object>>(handler));
             }
         }
     }

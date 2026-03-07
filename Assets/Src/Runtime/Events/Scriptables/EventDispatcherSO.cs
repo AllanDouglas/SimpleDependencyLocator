@@ -9,9 +9,9 @@ namespace Injector
         [SerializeReference, ReferencePicker] private IEvent _event;
         [SerializeField] private InspectorEvent _onPerformEvent;
         public IEvent Event { get => _event; set => _event = value; }
-        public void Dispatch() => EventLocator.Dispatch(_event.GetType());
-        public void Subscribe(EventHandler handler) => EventLocator.Subscribe(_event.GetType(), handler);
-        public void Unsubscribe(EventHandler handler) => EventLocator.Unsubscribe(_event.GetType(), handler);
+        public void Dispatch() => EventLocator.Instance.Dispatch(_event.GetType());
+        public void Subscribe(EventHandler handler) => EventLocator.Instance.Subscribe(_event.GetType(), handler);
+        public void Unsubscribe(EventHandler handler) => EventLocator.Instance.Unsubscribe(_event.GetType(), handler);
 
         void OnEnable()
         {
@@ -32,11 +32,11 @@ namespace Injector
         [SerializeReference, ReferencePicker] private TEvent _event;
         [SerializeField] private InspectorEvent<TEvent, TData> _onPerformEvent;
         public TEvent Event { get => _event; set => _event = value; }
-        public virtual void Dispatch(TData data) => EventLocator.Dispatch(Event.GetType(), data);
+        public virtual void Dispatch(TData data) => EventLocator.Instance.Dispatch(Event.GetType(), data);
         public virtual void Subscribe(EventHandler<TData> handler)
-            => EventLocator.Subscribe(Event.GetType(), UnsafeUtility.As<EventHandler<TData>, EventHandler<object>>(ref handler));
+            => EventLocator.Instance.Subscribe(Event.GetType(), UnsafeUtility.As<EventHandler<TData>, EventHandler<object>>(ref handler));
         public virtual void Unsubscribe(EventHandler<TData> handler) 
-            => EventLocator.Unsubscribe(Event.GetType(), UnsafeUtility.As<EventHandler<TData>, EventHandler<object>>(ref handler));
+            => EventLocator.Instance.Unsubscribe(Event.GetType(), UnsafeUtility.As<EventHandler<TData>, EventHandler<object>>(ref handler));
 
         void OnEnable()
         {
