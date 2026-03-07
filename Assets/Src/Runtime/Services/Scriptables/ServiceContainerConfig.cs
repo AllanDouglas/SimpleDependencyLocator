@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Injector
 {
-    [CreateAssetMenu(menuName = "SimpleDependencyLocator/Config/ServiceContainerConfig")]
+    [CreateAssetMenu(menuName = "Simple Dependency Locator/Config/Service Container Config")]
     public sealed class ServiceContainerConfig : ScriptableObject
     {
         [SerializeField] private ServiceEntry[] _servicesEntry;
