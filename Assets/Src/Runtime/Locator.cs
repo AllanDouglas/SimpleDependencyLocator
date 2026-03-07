@@ -1,0 +1,12 @@
+namespace Injector
+{
+    public sealed class Locator
+    {
+        public ServiceLocator ServiceLocator { get; } = ServiceLocator.Instance;
+        public EventLocator EventLocator { get; } = EventLocator.Instance;
+
+        private static Locator _instance;
+        public static Locator Instance => _instance ??= new Locator();
+        private Locator() { }
+    }
+}
