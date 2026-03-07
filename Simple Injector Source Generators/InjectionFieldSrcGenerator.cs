@@ -104,10 +104,10 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine("    public readonly struct Singleton" + structName + " : " + fullInterfaceName);
             sb.AppendLine("    {");
             // sb.AppendLine("        public static " + structName + " Create()");
-            // sb.AppendLine($"            => new  {structName}(ServiceLocator.Resolve<{fullInterfaceName}>());");
+            // sb.AppendLine($"            => new  {structName}(ServiceLocator.Instance.Resolve<{fullInterfaceName}>());");
             sb.AppendLine();
             sb.AppendLine("        private static " + fullInterfaceName + " _serviceCache ;");
-            sb.AppendLine($"        private {fullInterfaceName} _service =>  _serviceCache ??= ServiceLocator.Resolve<{fullInterfaceName}>();");
+            sb.AppendLine($"        private {fullInterfaceName} _service =>  _serviceCache ??= ServiceLocator.Instance.Resolve<{fullInterfaceName}>();");
             sb.AppendLine();
             // sb.AppendLine("        public " + structName + "(" + fullInterfaceName + " service)");
             // sb.AppendLine("        {");

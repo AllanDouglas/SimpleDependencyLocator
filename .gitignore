@@ -86,3 +86,6 @@ UserSettings/QuickSearch.settings
 
 #crash
 mono_crash*
+
+Assets/Resources.meta
+Assets/Resources/

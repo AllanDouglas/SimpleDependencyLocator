@@ -6,13 +6,15 @@ using System.Linq;
 
 namespace Injector
 {
-    public static class ServiceLocator
+    public class ServiceLocator
     {
         private static bool _loaded;
-        readonly static Dictionary<Type, IService> _serviceMapping = new();
+        private readonly Dictionary<Type, IService> _serviceMapping = new();
 
+        private static ServiceLocator _instance;
+        public static ServiceLocator Instance => _instance ??= new ServiceLocator();
 
-        static ServiceLocator()
+        private ServiceLocator()
         {
             Load();
         }
@@ -38,16 +40,42 @@ namespace Injector
                                           where typeName == type.FullName
                                           select (entry, type))
             {
-                _serviceMapping.Add(type, entry.service);
+                Instance._serviceMapping.Add(type, entry.service);
             }
 
             _loaded = true;
         }
 
-        public static T Resolve<T>()
+        public void Bind<T>(T service)
+            where T : IService
+        {
+#if UNITY_EDITOR
+            if (_serviceMapping.ContainsKey(typeof(T)))
+            {
+                throw new InvalidOperationException($"Service for {typeof(T)} is already registered!");
+            }
+
+#endif
+            _serviceMapping[typeof(T)] = service;
+        }
+
+        public void Unbind<T>()
+            where T : IService
+        {
+#if UNITY_EDITOR
+            if (!_serviceMapping.ContainsKey(typeof(T)))
+            {
+                throw new KeyNotFoundException($"Service for {typeof(T)} not found!");
+            }
+#endif
+
+            _serviceMapping.Remove(typeof(T));
+        }
+
+        public T Resolve<T>()
             where T : IService => Resolve<T>(typeof(T));
 
-        public static T Resolve<T>(Type type)
+        public T Resolve<T>(Type type)
             where T : IService
         {
 #if UNITY_EDITOR
@@ -63,7 +91,7 @@ namespace Injector
                 : throw new KeyNotFoundException($"Service for {typeof(T)} not found!");
         }
 
-        public static bool ResolveToRef<T>(ref T service)
+        public bool ResolveToRef<T>(ref T service)
             where T : IService
         {
             TryResolve(typeof(T), out T _service);
@@ -71,10 +99,10 @@ namespace Injector
             return service is not null;
         }
 
-        public static bool TryResolve<T>(out T service)
+        public bool TryResolve<T>(out T service)
             where T : IService => TryResolve(typeof(T), out service);
 
-        public static bool TryResolve<T>(Type type, out T service)
+        public bool TryResolve<T>(Type type, out T service)
             where T : IService
         {
             if (_loaded)
