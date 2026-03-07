@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 namespace Injector
 {
 
@@ -232,7 +233,7 @@ namespace Injector
             // rebuild vertical button list on left panel
             leftPanel.Clear();
 
-            if (config.ServicesEntry == null || config.ServicesEntry.Length == 0)
+            if (config.ServicesEntry == null || config.ServicesEntry.Count == 0)
             {
                 selectedTabIndex = 0;
                 contentContainer.Clear();
@@ -242,13 +243,13 @@ namespace Injector
             }
 
             // clamp selected index
-            if (selectedTabIndex >= config.ServicesEntry.Length)
+            if (selectedTabIndex >= config.ServicesEntry.Count)
             {
-                selectedTabIndex = config.ServicesEntry.Length - 1;
+                selectedTabIndex = config.ServicesEntry.Count - 1;
             }
 
             // create buttons
-            for (int i = 0; i < config.ServicesEntry.Length; i++)
+            for (int i = 0; i < config.ServicesEntry.Count; i++)
             {
                 var btn = CreateTabButton(i);
                 btn.style.width = new StyleLength(new Length(95, LengthUnit.Percent));
@@ -319,7 +320,7 @@ namespace Injector
         {
             contentContainer.Clear();
 
-            if (tabIndex < 0 || tabIndex >= config.ServicesEntry.Length)
+            if (tabIndex < 0 || tabIndex >= config.ServicesEntry.Count)
                 return;
 
             var entry = config.ServicesEntry[tabIndex];
@@ -397,12 +398,12 @@ namespace Injector
 
         private void AddNewTab()
         {
-            var entries = new List<ServiceContainerConfig.ServiceEntry>(config.ServicesEntry ?? System.Array.Empty<ServiceContainerConfig.ServiceEntry>())
+            var entries = new List<ServiceContainerConfig.ServiceEntry>(config.ServicesEntry ?? new())
             {
                 new ServiceContainerConfig.ServiceEntry()
             };
 
-            config.ServicesEntry = entries.ToArray();
+            config.ServicesEntry = entries.ToList();
             serializedConfig.ApplyModifiedProperties();
 
             Task.Delay(100).ContinueWith(_ =>
@@ -416,16 +417,16 @@ namespace Injector
 
         private void RemoveTab(int tabIndex)
         {
-            if (tabIndex < 0 || tabIndex >= config.ServicesEntry.Length)
+            if (tabIndex < 0 || tabIndex >= config.ServicesEntry.Count)
                 return;
 
             serializedConfig.ApplyModifiedProperties();
 
             var entries = new List<ServiceContainerConfig.ServiceEntry>(config.ServicesEntry);
             entries.RemoveAt(tabIndex);
-            config.ServicesEntry = entries.ToArray();
+            config.ServicesEntry = entries.ToList();
 
-            if (selectedTabIndex >= config.ServicesEntry.Length && selectedTabIndex > 0)
+            if (selectedTabIndex >= config.ServicesEntry.Count && selectedTabIndex > 0)
             {
                 selectedTabIndex--;
             }
