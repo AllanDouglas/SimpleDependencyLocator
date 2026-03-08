@@ -16,13 +16,8 @@ namespace Injector
 
         public ServiceContainerConfig ServiceInstaller => ServiceContainerConfig.Instance;
 
-        private ServiceLocator()
-        {
-            Load();
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void Load()
+        // [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private void Load()
         {
             if (_loaded)
             {
@@ -86,13 +81,6 @@ namespace Injector
         public T Resolve<T>(Type type)
             where T : IService
         {
-#if UNITY_EDITOR
-            if (!_loaded)
-            {
-                return default;
-            }
-#endif
-
             TryResolve(type, out T service);
             return service is not null
                 ? service
@@ -113,21 +101,16 @@ namespace Injector
         public bool TryResolve<T>(Type type, out T service)
             where T : IService
         {
-            if (_loaded)
+            Load();
+            
+            if (_serviceMapping.TryGetValue(type, out var resolvedService))
             {
-                if (_serviceMapping.TryGetValue(type, out var resolvedService))
-                {
-                    service = (T)resolvedService;
-                    return true;
-                }
-
-                service = default;
-                return false;
+                service = (T)resolvedService;
+                return true;
             }
 
             service = default;
             return false;
-
         }
     }
 

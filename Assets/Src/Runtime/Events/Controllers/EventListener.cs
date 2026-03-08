@@ -10,7 +10,7 @@ namespace Injector
 
         void OnEnable()
         {
-            if (Application.IsPlaying(this))
+            if (Application.IsPlaying(this) && _event is not null)
             {
                 EventLocator.Instance.Unsubscribe(_event.GetType(), _onPerformEvent.Invoke);
                 EventLocator.Instance.Subscribe(_event.GetType(), _onPerformEvent.Invoke);
