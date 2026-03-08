@@ -280,7 +280,7 @@ namespace SimpleInject.SourceGenerators
 
         private static readonly string LogPath =
                 Path.Combine(
-                    Environment.CurrentDirectory,
+                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
                     "inject_generator.log");
 
         public void Log(string message)
