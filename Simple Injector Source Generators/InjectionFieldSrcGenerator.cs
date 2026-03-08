@@ -13,6 +13,7 @@ namespace SimpleInject.SourceGenerators
     [Generator]
     public sealed class InjectionFieldSrcGenerator : ISourceGenerator
     {
+        private readonly static HashSet<string> GeneratedStructs = new();
         public void Initialize(GeneratorInitializationContext context)
         {
             context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
@@ -25,7 +26,6 @@ namespace SimpleInject.SourceGenerators
 
             Log($"#### STARTING assembly:{context.Compilation.AssemblyName} candidate {receiver.CandidateClasses} ####");
 
-            var generatedStructs = new HashSet<string>();
             var generatedClasses = new HashSet<string>();
 
             foreach (var classDecl in receiver.CandidateClasses)
@@ -58,10 +58,10 @@ namespace SimpleInject.SourceGenerators
 
                         var key = typeSymbol.ToDisplayString();
                         Log($"#### Try to generate struct {key} STARTING assembly:{context.Compilation.AssemblyName} candidate {receiver.CandidateClasses} ####");
-                        if (generatedStructs.Contains(key))
+                        if (GeneratedStructs.Contains(key))
                             continue;
 
-                        if (generatedStructs.Add(key))
+                        if (GeneratedStructs.Add(key))
                             GenerateStruct(context, typeSymbol, fieldNamespaces);
                     }
                 }
