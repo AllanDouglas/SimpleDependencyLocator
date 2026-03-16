@@ -83,6 +83,8 @@ namespace SimpleInject.SourceGenerators
         {
 
             var fullInterfaceName = interfaceSymbol.ToDisplayString();
+            var interfacesToImplement = new List<INamedTypeSymbol> { interfaceSymbol };
+            interfacesToImplement.AddRange(classSymbol.AllInterfaces.Where(i => !SymbolEqualityComparer.Default.Equals(i, interfaceSymbol)));
             var interfaceName = interfaceSymbol.Name;
 
             var cleanName = interfaceName.StartsWith("I") &&
@@ -92,6 +94,8 @@ namespace SimpleInject.SourceGenerators
 
             var structName = cleanName + "InjectionField";
             var usingNamespaceName = interfaceSymbol.ContainingNamespace.ToDisplayString();
+
+            var allNamespaces = interfacesToImplement.Select(i => i.ContainingNamespace.ToDisplayString()).Distinct();
 
             var classNamespace = classSymbol.ContainingNamespace.ToDisplayString()
 ;
@@ -104,10 +108,11 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine("// </auto-generated>");
             sb.AppendLine();
             sb.AppendLine($"using Injector;");
-            sb.AppendLine($"using {usingNamespaceName};");
+            foreach (var ns in allNamespaces)
+                sb.AppendLine($"using {ns};");
             sb.AppendLine($"namespace {classNamespace}");
             sb.AppendLine("{");
-            sb.AppendLine("    public readonly struct Singleton" + structName + " : " + fullInterfaceName);
+            sb.AppendLine("    public readonly struct Singleton" + structName + " : " + string.Join(", ", interfacesToImplement.Select(i => i.ToDisplayString())));
             sb.AppendLine("    {");
             // sb.AppendLine("        public static " + structName + " Create()");
             // sb.AppendLine($"            => new  {structName}(ServiceLocator.Instance.Resolve<{fullInterfaceName}>());");
@@ -123,74 +128,83 @@ namespace SimpleInject.SourceGenerators
             // =====================
             // MÉTODOS
             // =====================
-            foreach (var method in interfaceSymbol.GetMembers().OfType<IMethodSymbol>())
+            foreach (var iface in interfacesToImplement)
             {
-                if (method.MethodKind != MethodKind.Ordinary)
-                    continue;
+                foreach (var method in iface.GetMembers().OfType<IMethodSymbol>())
+                {
+                    if (method.MethodKind != MethodKind.Ordinary)
+                        continue;
 
-                var returnType = method.ReturnType.ToDisplayString();
-                var methodName = method.Name;
+                    var returnType = method.ReturnType.ToDisplayString();
+                    var methodName = method.Name;
 
-                var genericParams = method.IsGenericMethod
-                    ? "<" + string.Join(", ", method.TypeParameters.Select(t => t.Name)) + ">"
-                    : "";
+                    var genericParams = method.IsGenericMethod
+                        ? "<" + string.Join(", ", method.TypeParameters.Select(t => t.Name)) + ">"
+                        : "";
 
-                var parameters = string.Join(", ",
-                    method.Parameters.Select(p =>
-                    {
-                        string modifier = "";
-                        if (p.RefKind == RefKind.Ref) modifier = "ref ";
-                        else if (p.RefKind == RefKind.Out) modifier = "out ";
-                        else if (p.RefKind == RefKind.In) modifier = "in ";
+                    var parameters = string.Join(", ",
+                        method.Parameters.Select(p =>
+                        {
+                            string modifier = "";
+                            if (p.RefKind == RefKind.Ref) modifier = "ref ";
+                            else if (p.RefKind == RefKind.Out) modifier = "out ";
+                            else if (p.RefKind == RefKind.In) modifier = "in ";
 
-                        return modifier + p.Type.ToDisplayString() + " " + p.Name;
-                    }));
+                            return modifier + p.Type.ToDisplayString() + " " + p.Name;
+                        }));
 
-                var arguments = string.Join(", ",
-                    method.Parameters.Select(p =>
-                    {
-                        string modifier = "";
-                        if (p.RefKind == RefKind.Ref) modifier = "ref ";
-                        else if (p.RefKind == RefKind.Out) modifier = "out ";
-                        else if (p.RefKind == RefKind.In) modifier = "in ";
+                    var arguments = string.Join(", ",
+                        method.Parameters.Select(p =>
+                        {
+                            string modifier = "";
+                            if (p.RefKind == RefKind.Ref) modifier = "ref ";
+                            else if (p.RefKind == RefKind.Out) modifier = "out ";
+                            else if (p.RefKind == RefKind.In) modifier = "in ";
 
-                        return modifier + p.Name;
-                    }));
+                            return modifier + p.Name;
+                        }));
 
-                sb.AppendLine();
-                sb.AppendLine("        public " + returnType + " " + methodName + genericParams + "(" + parameters + ")");
-                sb.AppendLine("            => _service." + methodName + genericParams + "(" + arguments + ");");
+                    sb.AppendLine();
+                    sb.AppendLine("        public " + returnType + " " + methodName + genericParams + "(" + parameters + ")");
+                    sb.AppendLine("            => _service." + methodName + genericParams + "(" + arguments + ");");
+                }
             }
 
             // =====================
             // PROPRIEDADES
             // =====================
-            foreach (var prop in interfaceSymbol.GetMembers().OfType<IPropertySymbol>())
+            foreach (var iface in interfacesToImplement)
             {
-                sb.AppendLine();
-                sb.AppendLine("        public " + prop.Type.ToDisplayString() + " " + prop.Name);
-                sb.AppendLine("        {");
+                foreach (var prop in iface.GetMembers().OfType<IPropertySymbol>())
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("        public " + prop.Type.ToDisplayString() + " " + prop.Name);
+                    sb.AppendLine("        {");
 
-                if (prop.GetMethod != null)
-                    sb.AppendLine("            get => _service." + prop.Name + ";");
+                    if (prop.GetMethod != null)
+                        sb.AppendLine("            get => _service." + prop.Name + ";");
 
-                if (prop.SetMethod != null)
-                    sb.AppendLine("            set => _service." + prop.Name + " = value;");
+                    if (prop.SetMethod != null)
+                        sb.AppendLine("            set => _service." + prop.Name + " = value;");
 
-                sb.AppendLine("        }");
+                    sb.AppendLine("        }");
+                }
             }
 
             // =====================
             // EVENTOS
             // =====================
-            foreach (var ev in interfaceSymbol.GetMembers().OfType<IEventSymbol>())
+            foreach (var iface in interfacesToImplement)
             {
-                sb.AppendLine();
-                sb.AppendLine("        public event " + ev.Type.ToDisplayString() + " " + ev.Name);
-                sb.AppendLine("        {");
-                sb.AppendLine("            add => _service." + ev.Name + " += value;");
-                sb.AppendLine("            remove => _service." + ev.Name + " -= value;");
-                sb.AppendLine("        }");
+                foreach (var ev in iface.GetMembers().OfType<IEventSymbol>())
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("        public event " + ev.Type.ToDisplayString() + " " + ev.Name);
+                    sb.AppendLine("        {");
+                    sb.AppendLine("            add => _service." + ev.Name + " += value;");
+                    sb.AppendLine("            remove => _service." + ev.Name + " -= value;");
+                    sb.AppendLine("        }");
+                }
             }
 
             sb.AppendLine("    }");
@@ -256,7 +270,7 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
-           // Log(sb.ToString());
+            // Log(sb.ToString());
 
             context.AddSource($"{className}_{context.Compilation.AssemblyName}.Inject.g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
@@ -301,7 +315,7 @@ namespace SimpleInject.SourceGenerators
             }
             catch
             {
-                // Evita quebrar a compilação caso falhe
+
             }
         }
 
