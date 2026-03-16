@@ -84,7 +84,7 @@ namespace SimpleInject.SourceGenerators
 
             var fullInterfaceName = interfaceSymbol.ToDisplayString();
             var interfacesToImplement = new List<INamedTypeSymbol> { interfaceSymbol };
-            interfacesToImplement.AddRange(classSymbol.AllInterfaces.Where(i => !SymbolEqualityComparer.Default.Equals(i, interfaceSymbol)));
+            interfacesToImplement.AddRange(interfaceSymbol.AllInterfaces.Where(i => !SymbolEqualityComparer.Default.Equals(i, interfaceSymbol)));
             var interfaceName = interfaceSymbol.Name;
 
             var cleanName = interfaceName.StartsWith("I") &&
