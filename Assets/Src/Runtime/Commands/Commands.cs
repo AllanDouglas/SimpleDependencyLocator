@@ -4,22 +4,22 @@ namespace Injector
     {
         void Execute();
 
-        void Bind<TEvent>() where TEvent : IEvent, new()
-            => EventLocator.Instance.Subscribe<TEvent>(Execute);
+        void Bind<TEvent>() where TEvent : ISignal, new()
+            => SignalLocator.Instance.Subscribe<TEvent>(Execute);
 
-        void Unbind<TEvent>() where TEvent : IEvent, new()
-            => EventLocator.Instance.Unsubscribe<TEvent>(Execute);
+        void Unbind<TEvent>() where TEvent : ISignal, new()
+            => SignalLocator.Instance.Unsubscribe<TEvent>(Execute);
     }
 
     public interface ICommand<TData> : ICommandPrototype
     {
         void Execute(TData data);
 
-        void Bind<TEvent>() where TEvent : IEvent<TData>, new()
-            => EventLocator.Instance.Subscribe<TEvent, TData>(Execute);
+        void Bind<TEvent>() where TEvent : ISignal<TData>, new()
+            => SignalLocator.Instance.Subscribe<TEvent, TData>(Execute);
 
-        void Unbind<TEvent>() where TEvent : IEvent<TData>, new()
-            => EventLocator.Instance.Unsubscribe<TEvent, TData>(Execute);
+        void Unbind<TEvent>() where TEvent : ISignal<TData>, new()
+            => SignalLocator.Instance.Unsubscribe<TEvent, TData>(Execute);
     }
 
     public interface ICommandPrototype

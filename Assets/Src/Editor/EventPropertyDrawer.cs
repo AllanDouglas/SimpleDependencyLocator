@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 
 namespace Injector
 {
-    [CustomPropertyDrawer(typeof(IEvent))]
+    [CustomPropertyDrawer(typeof(ISignal))]
     public sealed class EventPropertyDrawer : PropertyDrawer
     {
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
@@ -21,11 +21,11 @@ namespace Injector
             var button = new Button(() =>
             {
 
-                IEvent eventValue = (IEvent)property.managedReferenceValue;
+                ISignal eventValue = (ISignal)property.managedReferenceValue;
 
                 if (Application.IsPlaying(property.serializedObject.targetObject))
                 {
-                    EventLocator.Instance.Dispatch(eventValue.GetType());
+                    SignalLocator.Instance.Dispatch(eventValue.GetType());
                     return;
                 }
 
@@ -40,7 +40,7 @@ namespace Injector
         }
     }
 
-    [CustomPropertyDrawer(typeof(IEvent<>))]
+    [CustomPropertyDrawer(typeof(ISignal<>))]
     public sealed class EventPropertyDrawerWithGeneric : PropertyDrawer
     {
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
@@ -53,7 +53,7 @@ namespace Injector
             var button = new Button(() =>
             {
 
-                IEvent<object> eventValue = Unsafe.As<IEvent<object>>(property.managedReferenceValue);
+                ISignal<object> eventValue = Unsafe.As<ISignal<object>>(property.managedReferenceValue);
 
                 SerializedProperty dataProperty = property.FindPropertyRelative("_data");
 
@@ -74,7 +74,7 @@ namespace Injector
 
                 if (Application.IsPlaying(property.serializedObject.targetObject))
                 {
-                    EventLocator.Instance.Dispatch(eventValue.GetType(), data);
+                    SignalLocator.Instance.Dispatch(eventValue.GetType(), data);
                     return;
                 }
 
