@@ -14,6 +14,7 @@ namespace Injector
         {
             if (Application.IsPlaying(this) && _Signal is not null)
             {
+                
                 SignalLocator.Instance.Unsubscribe(_Signal.GetType(), _onPerformSignal.Invoke);
                 SignalLocator.Instance.Subscribe(_Signal.GetType(), _onPerformSignal.Invoke);
             }
