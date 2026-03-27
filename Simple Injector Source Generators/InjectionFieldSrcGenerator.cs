@@ -51,6 +51,12 @@ namespace SimpleInject.SourceGenerators
 
                 var fieldNamespaces = new HashSet<string>();
 
+                var services = new List<INamedTypeSymbol>();
+                var signals = new List<INamedTypeSymbol>();
+
+                var iServiceSymbol = context.Compilation.GetTypeByMetadataName("Injector.IService");
+                var iSignalSymbol = context.Compilation.GetTypeByMetadataName("Injector.ISignal");
+
                 foreach (var arg in injectAttr.ConstructorArguments)
                 {
                     foreach (var element in arg.Values)
@@ -63,12 +69,31 @@ namespace SimpleInject.SourceGenerators
                         if (generatedStructs.Contains(key))
                             continue;
 
-                        if (generatedStructs.Add(key))
-                            GenerateStruct(context, typeSymbol, classSymbol, fieldNamespaces);
+                        bool isService = typeSymbol.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, iServiceSymbol)) || SymbolEqualityComparer.Default.Equals(typeSymbol, iServiceSymbol);
+                        bool isSignal = typeSymbol.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, iSignalSymbol)) || SymbolEqualityComparer.Default.Equals(typeSymbol, iSignalSymbol);
+
+                        if (isService)
+                        {
+                            services.Add(typeSymbol);
+                            if (generatedStructs.Add(key))
+                                GenerateStruct(context, typeSymbol, classSymbol, fieldNamespaces);
+                        }
+                        else if (isSignal)
+                        {
+                            signals.Add(typeSymbol);
+                        }
                     }
                 }
 
-                GeneratePartial(context, classSymbol, injectAttr, fieldNamespaces);
+                // Add namespaces for all types
+                foreach (var typeSymbol in services.Concat(signals))
+                {
+                    fieldNamespaces.Add(typeSymbol.ContainingNamespace.ToDisplayString());
+                    foreach (var iface in typeSymbol.AllInterfaces)
+                        fieldNamespaces.Add(iface.ContainingNamespace.ToDisplayString());
+                }
+
+                GeneratePartial(context, classSymbol, injectAttr, fieldNamespaces, services, signals);
             }
         }
 
@@ -223,7 +248,9 @@ namespace SimpleInject.SourceGenerators
             GeneratorExecutionContext context,
             INamedTypeSymbol classSymbol,
             AttributeData attribute,
-            HashSet<string> fieldNamespaceCollection)
+            HashSet<string> fieldNamespaceCollection,
+            List<INamedTypeSymbol> services,
+            List<INamedTypeSymbol> signals)
         {
             var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
             var className = classSymbol.Name;
@@ -234,6 +261,7 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine($"// Target Class Assembly: {classSymbol.ContainingAssembly.Name}");
             sb.AppendLine($"// Assembly: {context.Compilation.AssemblyName}");
             sb.AppendLine("// </auto-generated>");
+            sb.AppendLine($"using Injector;");
             foreach (var fieldNamespace in fieldNamespaceCollection)
             {
                 sb.AppendLine($"using {fieldNamespace};");
@@ -244,27 +272,33 @@ namespace SimpleInject.SourceGenerators
             sb.AppendLine("    public partial class " + className);
             sb.AppendLine("    {");
 
-            foreach (var arg in attribute.ConstructorArguments)
+            foreach (var typeSymbol in services)
             {
-                foreach (var element in arg.Values)
-                {
-                    if (element.Value is not INamedTypeSymbol typeSymbol)
-                        continue;
+                var interfaceName = typeSymbol.Name;
 
-                    var interfaceName = typeSymbol.Name;
+                var cleanName = interfaceName.StartsWith("I") &&
+                                interfaceName.Length > 1
+                    ? interfaceName.Substring(1)
+                    : interfaceName;
 
-                    var cleanName = interfaceName.StartsWith("I") &&
-                                    interfaceName.Length > 1
-                        ? interfaceName.Substring(1)
-                        : interfaceName;
+                var structName = $"{namespaceName}.Singleton{cleanName}InjectionField";
+                var propertyName = cleanName;
 
-                    var structName = $"{namespaceName}.Singleton{cleanName}InjectionField";
-                    var propertyName = cleanName;
+                sb.AppendLine();
+                // sb.AppendLine("        private " + structName + " " + propertyName + " { get; } = " + structName + ".Create();");
+                sb.AppendLine("        private " + structName + " " + propertyName + " { get; }");
+            }
 
-                    sb.AppendLine();
-                    // sb.AppendLine("        private " + structName + " " + propertyName + " { get; } = " + structName + ".Create();");
-                    sb.AppendLine("        private " + structName + " " + propertyName + " { get; }");
-                }
+            foreach (var typeSymbol in signals)
+            {
+                var typeName = typeSymbol.Name;
+                var fullTypeName = typeSymbol.ToDisplayString();
+
+                sb.AppendLine();
+                sb.AppendLine("        public " + fullTypeName + " " + typeName);
+                sb.AppendLine("        {");
+                sb.AppendLine("            get => Locator.Instance.SignalLocator.GetSignal<" + fullTypeName + ">();");
+                sb.AppendLine("        }");
             }
 
             sb.AppendLine("    }");
