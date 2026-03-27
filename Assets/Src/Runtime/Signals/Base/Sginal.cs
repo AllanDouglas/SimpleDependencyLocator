@@ -13,7 +13,7 @@ namespace Injector
         void Unsubscribe(SignalHandler SignalHandler);
     }
 
-    public interface ISignal<T>
+    public interface ISignal<T> : ISignal
     {
         void Dispatch(T data);
         void Subscribe(SignalHandler<T> handler);
@@ -23,11 +23,14 @@ namespace Injector
     public abstract class Signal<T> : ISignal<T>
     {
         [UnityEngine.SerializeField] private T _data;
-        private SignalHandler<T> SignalHandler;
-        public void Dispatch(T data) => SignalHandler?.Invoke(data);
-        public void Subscribe(SignalHandler<T> handler) => SignalHandler += handler;
-        public void Unsubscribe(SignalHandler<T> handler) => SignalHandler -= handler;
-
+        private SignalHandler<T> _signalHandler;
+        private SignalHandler _signalHandlerNoData;
+        public void Dispatch(T data) => _signalHandler?.Invoke(data);
+        public void Dispatch() => _signalHandlerNoData?.Invoke();
+        public void Subscribe(SignalHandler<T> handler) => _signalHandler += handler;
+        public void Subscribe(SignalHandler SignalHandler) => _signalHandlerNoData += SignalHandler;
+        public void Unsubscribe(SignalHandler<T> handler) => _signalHandler -= handler;
+        public void Unsubscribe(SignalHandler SignalHandler) => _signalHandlerNoData -= SignalHandler;
     }
 
     public abstract class Signal : ISignal
