@@ -36,6 +36,7 @@ namespace SimpleInject.SourceGenerators
 
             foreach (var classDecl in receiver.CandidateClasses)
             {
+                signals.Clear();
                 var semanticModel = context.Compilation.GetSemanticModel(classDecl.SyntaxTree);
 
                 if (semanticModel.GetDeclaredSymbol(classDecl) is not INamedTypeSymbol classSymbol)
