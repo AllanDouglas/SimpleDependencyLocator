@@ -139,7 +139,7 @@ namespace SimpleInject.SourceGenerators
                 sb.AppendLine($"using {ns};");
             }
             sb.AppendLine($"using {GENERATED_FIELD_NAMESPACE};");
-            sb.AppendLine($"namespace {GENERATED_FIELD_NAMESPACE}");
+            sb.AppendLine($"namespace {usingNamespaceName}");
             sb.AppendLine("{");
             sb.AppendLine("    public readonly struct Singleton" + structName + " : " + string.Join(", ", interfacesToImplement.Select(i => i.ToDisplayString())));
             sb.AppendLine("    {");
