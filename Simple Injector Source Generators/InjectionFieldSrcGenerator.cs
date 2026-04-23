@@ -292,7 +292,7 @@ namespace SimpleInject.SourceGenerators
                         : interfaceName;
 
 
-                    var structName = $"{typeSymbol.ToDisplayString()}.Singleton{cleanName}InjectionField";
+                    var structName = $"Singleton{cleanName}InjectionField";
                     var propertyName = cleanName;
 
                     sb.AppendLine();
