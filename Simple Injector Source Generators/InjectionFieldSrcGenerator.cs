@@ -291,7 +291,8 @@ namespace SimpleInject.SourceGenerators
                         ? interfaceName.Substring(1)
                         : interfaceName;
 
-                    var structName = $"{namespaceName}.Singleton{cleanName}InjectionField";
+
+                    var structName = $"{typeSymbol.ToDisplayString()}.Singleton{cleanName}InjectionField";
                     var propertyName = cleanName;
 
                     sb.AppendLine();
@@ -304,6 +305,7 @@ namespace SimpleInject.SourceGenerators
             {
                 var typeName = typeSymbol.Name;
                 var fullTypeName = typeSymbol.ToDisplayString();
+                var fieldNamespaceName = typeSymbol.ContainingNamespace.ToDisplayString();
 
                 sb.AppendLine();
                 sb.AppendLine("        public " + fullTypeName + " " + typeName);
