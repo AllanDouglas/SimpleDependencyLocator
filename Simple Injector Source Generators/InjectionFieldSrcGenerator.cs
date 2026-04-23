@@ -138,16 +138,22 @@ namespace SimpleInject.SourceGenerators
             {
                 sb.AppendLine($"using {ns};");
             }
-            sb.AppendLine($"using {GENERATED_FIELD_NAMESPACE};");
-            sb.AppendLine($"namespace {usingNamespaceName}");
+
+            sb.AppendLine($"namespace {GENERATED_FIELD_NAMESPACE}");
             sb.AppendLine("{");
             sb.AppendLine("    public readonly struct Singleton" + structName + " : " + string.Join(", ", interfacesToImplement.Select(i => i.ToDisplayString())));
             sb.AppendLine("    {");
+            // sb.AppendLine("        public static " + structName + " Create()");
+            // sb.AppendLine($"            => new  {structName}(ServiceLocator.Instance.Resolve<{fullInterfaceName}>());");
             sb.AppendLine();
             sb.AppendLine("        private static " + fullInterfaceName + " _serviceCache ;");
             sb.AppendLine($"        private {fullInterfaceName} _service =>  _serviceCache ??=  {INJECTION_FIELD_NAMESPACE}.ServiceLocator.Instance.Resolve<{fullInterfaceName}>();");
             sb.AppendLine();
-            
+            // sb.AppendLine("        public " + structName + "(" + fullInterfaceName + " service)");
+            // sb.AppendLine("        {");
+            // sb.AppendLine("            _service = service;");
+            // sb.AppendLine("        }");
+
             // =====================
             // MÉTODOS
             // =====================
@@ -262,7 +268,7 @@ namespace SimpleInject.SourceGenerators
             {
                 sb.AppendLine($"using {fieldNamespace};");
             }
-
+            sb.AppendLine($"using {GENERATED_FIELD_NAMESPACE};");
             sb.AppendLine("namespace " + namespaceName);
             sb.AppendLine("{");
             sb.AppendLine("    public partial class " + className);
