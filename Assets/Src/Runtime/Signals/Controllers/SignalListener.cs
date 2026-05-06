@@ -1,10 +1,12 @@
+using System;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
 namespace Injector
 {
-    [MovedFrom(true,sourceClassName:"EventListener")]
+
+    [MovedFrom(true, sourceClassName: "EventListener")]
     public sealed class SignalListener : MonoBehaviour
     {
         [SerializeReference, ReferencePicker] private ISignal _Signal;
@@ -14,7 +16,7 @@ namespace Injector
         {
             if (Application.IsPlaying(this) && _Signal is not null)
             {
-                
+
                 SignalLocator.Instance.Unsubscribe(_Signal.GetType(), _onPerformSignal.Invoke);
                 SignalLocator.Instance.Subscribe(_Signal.GetType(), _onPerformSignal.Invoke);
             }

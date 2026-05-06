@@ -28,6 +28,18 @@ namespace Injector
             return newSignal;
         }
 
+        public ISignal GetSignal(Type type)
+        {
+            if (_Signals.ContainsKey(type))
+            {
+                return _Signals[type] as ISignal;
+            }
+
+            var signal = Activator.CreateInstance(type) as ISignal;
+            _Signals.Add(type, signal);
+            return signal;
+        }
+
         private bool TryGetSignal<TSignal>(out TSignal signal) where TSignal : ISignal, new()
         {
             return TryGetSignal(typeof(TSignal), out signal);
